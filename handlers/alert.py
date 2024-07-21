@@ -32,10 +32,10 @@ async def set_alerts(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer(
         "Введите название криптовалюты и время через запятую например: (bitcoin, 08:00):"
     )
-    await state.set_state(CryptoStates.waitign_for_time)
+    await state.set_state(CryptoStates.waiting_for_time)
 
 
-@router.message(CryptoStates.waitign_for_time)
+@router.message(CryptoStates.waiting_for_time)
 async def process_alert_time(message: types.Message, state: FSMContext):
     bot = message.bot
     try:
