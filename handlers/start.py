@@ -12,3 +12,5 @@ async def send_welcome(message: types.Message):
         f"Выберите криптовалюту, чтобы получить <b>актуальный курс</b>\n\nНастройте систему оповещений",
         reply_markup=get_settings_crypto_kb(),
     )
+
+
