@@ -40,3 +40,9 @@ def shedule_job(bot: Bot, user_id, crypto, hour, minute):
         print(f"Job scheduled: {job_id}")
     except Exception as e:
         print(f"Error scheduling job: {e}")
+
+
+def remove_user_jobs(user_id):
+    for job in sheduler.get_jobs():
+        if job.id.startswith(f"{user_id}_"):
+            sheduler.remove_job(job.id)
