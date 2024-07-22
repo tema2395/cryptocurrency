@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards.for_alerts import get_alert_settings_kb
 from states import CryptoStates
 from sheduler import shedule_job, remove_user_jobs
+from keyboards.main_buttons import get_back_kb
 
 router = Router()
 
@@ -45,7 +46,8 @@ async def set_alerts(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Сначала включите оповещения")
         return
     await callback.message.edit_text(
-        "Введите название криптовалюты и время через запятую например: (bitcoin, 08:00):"
+        text="Введите название криптовалюты и время через запятую например: (bitcoin, 08:00):",
+        reply_markup=get_back_kb(),
     )
     await state.set_state(CryptoStates.waiting_for_time)
 
@@ -63,7 +65,7 @@ async def process_alert_time(message: types.Message, state: FSMContext):
         user_data = await state.get_data()
         if user_data.get("alerts_enabled", False):
             shedule_job(bot, user_id, crypto, hour, minute)
-            await message.answer(f"Оповещения для {crypto} установлены на {user_time}.")
+            await message.answer(text= f"Оповещения для {crypto} установлены на{user_time}.", reply_markup=get_back_kb())
         else:
             await message.answer("Оповещения выключены. Включите их в настройках.")
 
@@ -72,3 +74,4 @@ async def process_alert_time(message: types.Message, state: FSMContext):
         await message.answer(
             "Неправильный формат. Попробуйте снова. Введите в формате: bitcoin, 08:00"
         )
+

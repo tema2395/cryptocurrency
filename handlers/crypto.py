@@ -12,7 +12,7 @@ popular_cryptos = [
     "ethereum",
     "bnb",
     "solana",
-    "toncoin",
+    "the-open-network",
     "dogecoin",
     "litecoin",
     "pepe",
