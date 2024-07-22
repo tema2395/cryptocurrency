@@ -7,18 +7,18 @@ def get_alert_settings_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.add(
         types.InlineKeyboardButton(
-            text="Включить оповещения", callback_data="enable_alerts"
+            text="Включить оповещения🔔", callback_data="enable_alerts"
         ),
         types.InlineKeyboardButton(
-            text="Выключить овопещения", callback_data="disable_alerts"
+            text="Выключить овопещения🔕", callback_data="disable_alerts"
         ),
     )
     builder.row(
         types.InlineKeyboardButton(
-            text="Настройка оповещений", callback_data="set_alerts"
+            text="Настройка оповещений⚙️", callback_data="set_alerts"
         ),
         types.InlineKeyboardButton(
-            text="Назад", callback_data="back_menu"
+            text="Назад🔙", callback_data="back_menu"
         ),
     )
     return builder.as_markup()

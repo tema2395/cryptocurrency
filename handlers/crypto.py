@@ -10,12 +10,9 @@ router = Router()
 popular_cryptos = [
     "bitcoin",
     "ethereum",
-    "bnb",
     "solana",
     "the-open-network",
-    "dogecoin",
     "litecoin",
-    "pepe",
     "aptos",
     "maker",
 ]
