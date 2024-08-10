@@ -6,7 +6,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from sheduler import sheduler
+from scheduler import scheduler
 
 from handlers import start, crypto, alert
 
@@ -26,7 +26,7 @@ dp.include_router(alert.router)
 
 
 async def main():
-    sheduler.start()
+    scheduler.start()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

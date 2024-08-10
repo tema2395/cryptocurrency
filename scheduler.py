@@ -1,9 +1,10 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pytz import timezone as pytz_timezone
 from coingecko import get_crypto_price
 from aiogram import Bot
 
 
-sheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler()
 
 
 async def send_crypto_price(bot: Bot, user_id: int, crypto: str):
@@ -22,27 +23,27 @@ async def send_crypto_price(bot: Bot, user_id: int, crypto: str):
         print(f"Unexpected error in send_crypto_price: {e}")
 
 
-def shedule_job(bot: Bot, user_id, crypto, hour, minute):
+def schedule_job(bot: Bot, user_id, crypto, hour, minute, user_timezone):
     job_id = f"{user_id}_{crypto}"
-
-    if sheduler.get_job(job_id):
-        sheduler.remove_job(job_id)
-
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
     try:
-        sheduler.add_job(
+        tz = pytz_timezone(user_timezone)
+        scheduler.add_job(
             send_crypto_price,
             "cron",
             args=[bot, user_id, crypto],
             hour=hour,
             minute=minute,
             id=job_id,
+            timezone=tz
         )
-        print(f"Job scheduled: {job_id}")
+        print(f"Job scheduled: {job_id} in timezone {user_timezone}")
     except Exception as e:
         print(f"Error scheduling job: {e}")
 
 
 def remove_user_jobs(user_id):
-    for job in sheduler.get_jobs():
+    for job in scheduler.get_jobs():
         if job.id.startswith(f"{user_id}_"):
-            sheduler.remove_job(job.id)
+            scheduler.remove_job(job.id)
