@@ -1,6 +1,6 @@
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from coingecko import get_crypto_price
+from coingecko import get_crypto_price, search_crypto
 from states import CryptoStates
 from keyboards.for_crypto import get_crypto_kb
 
@@ -12,9 +12,6 @@ popular_cryptos = [
     "ethereum",
     "solana",
     "the-open-network",
-    "litecoin",
-    "aptos",
-    "maker",
 ]
 
 
@@ -39,17 +36,36 @@ async def selected_crypto(callback: types.CallbackQuery):
 async def other_crypto(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await callback.message.answer(
-        "Введите название одной или нескольких монет через запятую"
+        "Введите название одной или нескольких монет через пробел"
     )
     await state.set_state(CryptoStates.waiting_for_crypto)
 
 
 @router.message(CryptoStates.waiting_for_crypto)
 async def process_other_crypto(message: types.Message, state: FSMContext):
-    cryptos = [crypto.strip().lower() for crypto in message.text.split(",")]
-    prices = {crypto: await get_crypto_price(crypto) for crypto in cryptos}
-    response = "\n.".join(
-        [f"{crypto}: ${price:.2f}" for crypto, price in prices.items()]
-    )
+    queries = message.text.strip().lower().split()
+    all_results = []
+    not_found = []
+
+    for query in queries:
+        results = await search_crypto(query)
+        if results:
+            all_results.append(results[0]) 
+        else:
+            not_found.append(query)
+
+    if not all_results:
+        await message.answer("Ни одна из указанных криптовалют не найдена. Попробуйте еще раз.")
+        return
+
+    prices = []
+    for coin in all_results:
+        price = await get_crypto_price(coin['id'])
+        prices.append(f"{coin['name']} ({coin['symbol']}): ${price:.2f}")
+    
+    response = "\n".join(prices)
+    if not_found:
+        response += f"\n\nНе найдены: {', '.join(not_found)}"
+
     await message.answer(response)
     await state.clear()

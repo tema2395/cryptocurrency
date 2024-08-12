@@ -1,6 +1,7 @@
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+
 
 def get_back_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -9,12 +10,10 @@ def get_back_kb() -> InlineKeyboardMarkup:
     )
     return builder.as_markup()
 
-def get_location_kb():
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Отправить местоположение", request_location=True)]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True
+
+def get_location_kb() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.add(
+        types.KeyboardButton(text="Отправьте геолокацию", request_location=True),
     )
-    return keyboard
+    return builder.as_markup()

@@ -6,11 +6,11 @@ class NotificationBase(BaseModel):
     selected_crypto: str = ""
     selected_time: int = 0
     timezone: str = ""
-    
-    
+
+
 class NotificationCreate(NotificationBase):
     id: int
-    
+
 
 class NotificationUpdate(NotificationBase):
     pass
@@ -18,7 +18,6 @@ class NotificationUpdate(NotificationBase):
 
 class Notification(NotificationBase):
     id: int
-    
+
     class Config:
         from_attributes = True
-        

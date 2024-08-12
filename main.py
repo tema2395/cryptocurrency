@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from scheduler import scheduler
+from database.database import engine
+from database.models import Base
 
 from handlers import start, crypto, alert
 
@@ -25,7 +27,12 @@ dp.include_router(crypto.router)
 dp.include_router(alert.router)
 
 
+def create_table():
+    Base.metadata.create_all(bind=engine)
+    
+
 async def main():
+    create_table()
     scheduler.start()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

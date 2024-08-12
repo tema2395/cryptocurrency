@@ -17,8 +17,6 @@ def get_alert_settings_kb() -> InlineKeyboardMarkup:
         types.InlineKeyboardButton(
             text="Настройка оповещений⚙️", callback_data="set_alerts"
         ),
-        types.InlineKeyboardButton(
-            text="Назад🔙", callback_data="back_menu"
-        ),
+        types.InlineKeyboardButton(text="Назад🔙", callback_data="back_menu"),
     )
     return builder.as_markup()

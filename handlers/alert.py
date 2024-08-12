@@ -1,14 +1,19 @@
+import pytz
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from coingecko import search_crypto
+from database.crud import create_notification, get_notification, update_notification
+from database.database import SessionLocal
+from database import schemas
+from datetime import datetime, timedelta
 from keyboards.for_alerts import get_alert_settings_kb
+from keyboards.main_buttons import get_back_kb, get_location_kb
 from states import CryptoStates
 from scheduler import schedule_job, remove_user_jobs
-from keyboards.main_buttons import get_back_kb, get_location_kb
-from database.crud import create_notification
-from database.database import SessionLocal
 from timezonefinder import TimezoneFinder
-from datetime import datetime
-import pytz
+
 
 router = Router()
 
@@ -24,6 +29,18 @@ async def settings(callback: types.CallbackQuery):
 
 @router.callback_query(F.data == "enable_alerts")
 async def enable_alerts(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    db = SessionLocal()
+    notification = get_notification(db, user_id)
+    if notification:
+        update_notification(
+            db, user_id, schemas.NotificationUpdate(notifications_are_active=True)
+        )
+    else:
+        create_notification(
+            db, schemas.NotificationCreate(id=user_id, notifications_are_active=True)
+        )
+    db.close()
     await state.update_data(alerts_enabled=True)
     await callback.answer("Оповещения включены")
     await callback.message.edit_text(
@@ -35,6 +52,13 @@ async def enable_alerts(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "disable_alerts")
 async def disable_alerts(callback: types.CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
+    db = SessionLocal()
+    notification = get_notification(db, user_id)
+    if notification:
+        update_notification(
+            db, user_id, schemas.NotificationUpdate(notifications_are_active=False)
+        )
+    db.close()
     await state.update_data(alerts_enabled=False)
     remove_user_jobs(user_id)
     await callback.answer("Оповещения выключены")
@@ -46,18 +70,26 @@ async def disable_alerts(callback: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "set_alerts")
 async def set_alerts(callback: types.CallbackQuery, state: FSMContext):
-    user_data = await state.get_data()
-    if not user_data.get("alerts_enabled", False):
+    user_id = callback.from_user.id
+    db = SessionLocal()
+    notification = get_notification(db, user_id)
+    db.close()
+
+    if notification and notification.notifications_are_active:
+        await callback.message.edit_text(
+            text="Для определения вашего часового пояса, пожалуйста, отправьте свое местоположение."
+        )
+        await callback.message.answer(
+            text="Отправьте свое местоположение:",
+            reply_markup=get_location_kb(),
+        )
+        await state.set_state(CryptoStates.waiting_for_location)
+    else:
         await callback.answer("Сначала включите оповещения")
-        return
-    await callback.message.edit_text(
-        text="Для определения вашего часового пояса, пожалуйста, отправьте свое местоположение."
-    )
-    await callback.message.answer(
-        text="Отправьте свое местоположение:",
-        reply_markup=get_location_kb(),
-    )
-    await state.set_state(CryptoStates.waiting_for_location)
+        await callback.message.edit_text(
+            "Для настройки оповещений сначала необходимо их включить.",
+            reply_markup=get_alert_settings_kb(),
+        )
 
 
 @router.message(CryptoStates.waiting_for_location, F.content_type == "location")
@@ -70,11 +102,29 @@ async def handle_location(message: types.Message, state: FSMContext):
         timezone = pytz.timezone(timezone_str)
         current_time = datetime.now(timezone)
         await state.update_data(user_timezone=timezone_str)
+        user_id = message.from_user.id
+        db = SessionLocal()
+        notification = get_notification(db, user_id)
+        if notification:
+            update_notification(
+                db, user_id, schemas.NotificationUpdate(timezone=timezone_str)
+            )
+        else:
+            create_notification(
+                db,
+                schemas.NotificationCreate(
+                    id=user_id, notifications_are_active=True, timezone=timezone_str
+                ),
+            )
+        db.close()
         await message.answer(
-            f"Ваш часовой пояс определен как {timezone_str}. Текущее время:{current_time.strftime('%H:%M')}"
+            f"Ваш часовой пояс определен как {timezone_str}. Текущее время:{current_time.strftime('%H:%M')}",
+            reply_markup=ReplyKeyboardRemove()
         )
-        await message.answer("Теперь введите название криптовалюты:")
-        await state.set_state(CryptoStates.waiting_for_crypto)
+        await message.answer(
+            "Теперь введите криптовалюту через пробел, по которой хотите получать курс:"
+        )
+        await state.set_state(CryptoStates.waiting_for_crypto_alert)
     else:
         await message.answer(
             "Не удалось определить ваш часовой пояс. Пожалуйста, введите его вручную в формате 'Europe/Moscow'."
@@ -87,7 +137,7 @@ async def handle_manual_timezone(message: types.Message, state: FSMContext):
     try:
         timezone = pytz.timezone(message.text)
         await message.answer(f"Часовой пояс установлен как {message.text}")
-        await message.answer("Теперь введите название криптовалюты:")
+        await message.answer("Теперь введите название криптовалюты через пробел:")
         await state.set_state(CryptoStates.waiting_for_crypto)
     except pytz.exceptions.UnknownTimeZoneError:
         await message.answer(
@@ -95,44 +145,137 @@ async def handle_manual_timezone(message: types.Message, state: FSMContext):
         )
 
 
-@router.message(CryptoStates.waiting_for_crypto)
+@router.message(CryptoStates.waiting_for_crypto_alert)
 async def handle_process_crypto(message: types.Message, state: FSMContext):
-    crypto = message.text.strip().lower()
-    await state.update_data(crypto=crypto)
-    await message.answer("Теперь введите время для оповещений в формате ЧЧ:ММ:")
+    queries = message.text.strip().lower().split()
+    all_results = []
+    not_found = []
+
+    for query in queries:
+        results = await search_crypto(query)
+        if results:
+            all_results.extend(results[:3])
+        else:
+            not_found.append(query)
+
+    if not all_results:
+        await message.answer(
+            "Ни одна из указанных криптовалют не найдена. Попробуйте еще раз."
+        )
+        return
+
+    all_results = list({v["id"]: v for v in all_results}.values())
+
+    keyboard = InlineKeyboardBuilder()
+    for coin in all_results:
+        keyboard.button(
+            text=f"{coin['name']} ({coin['symbol']})",
+            callback_data=f"select_crypto:{coin['id']}",
+        )
+    keyboard.adjust(2) 
+    keyboard.button(text="Подтвердить выбор", callback_data="confirm_crypto_selection")
+
+    await state.update_data(available_cryptos=all_results)
+    await message.answer(
+        "Выберите криптовалюты из списка (можно выбрать несколько):",
+        reply_markup=keyboard.as_markup(),
+    )
+
+    if not_found:
+        await message.answer(f"Не найдены: {', '.join(not_found)}")
+
+
+@router.callback_query(F.data.startswith("select_crypto:"))
+async def select_crypto(callback: types.CallbackQuery, state: FSMContext):
+    crypto_id = callback.data.split(":")[1]
+    user_data = await state.get_data()
+    selected_cryptos = user_data.get("selected_cryptos", [])
+
+    if crypto_id in selected_cryptos:
+        selected_cryptos.remove(crypto_id)
+    else:
+        selected_cryptos.append(crypto_id)
+
+    await state.update_data(selected_cryptos=selected_cryptos)
+
+
+    keyboard = InlineKeyboardBuilder()
+    for coin in user_data["available_cryptos"]:
+        mark = "✅ " if coin["id"] in selected_cryptos else ""
+        keyboard.button(
+            text=f"{mark}{coin['name']} ({coin['symbol']})",
+            callback_data=f"select_crypto:{coin['id']}",
+        )
+    keyboard.adjust(2)
+    keyboard.button(text="Подтвердить выбор", callback_data="confirm_crypto_selection")
+
+    await callback.message.edit_reply_markup(reply_markup=keyboard.as_markup())
+
+
+@router.callback_query(F.data == "confirm_crypto_selection")
+async def confirm_crypto_selection(callback: types.CallbackQuery, state: FSMContext):
+    user_data = await state.get_data()
+    selected_cryptos = user_data.get("selected_cryptos", [])
+
+    if not selected_cryptos:
+        await callback.answer("Выберите хотя бы одну криптовалюту", show_alert=True)
+        return
+
+    selected_names = [
+        coin["name"]
+        for coin in user_data["available_cryptos"]
+        if coin["id"] in selected_cryptos
+    ]
+    await callback.message.edit_text(
+        f"Вы выбрали: {', '.join(selected_names)}\nТеперь введите время для оповещений в формате ЧЧ:ММ:"
+    )
+    
     await state.set_state(CryptoStates.waiting_for_time)
 
 
 @router.message(CryptoStates.waiting_for_time)
 async def process_time(message: types.Message, state: FSMContext):
+    await message.delete()
     try:
-        hour, minute = map(int, message.text.strip().split(":"))
+        time_str = message.text.strip()
+        hour, minute = map(int, time_str.split(":"))
         user_data = await state.get_data()
         user_id = message.from_user.id
+        selected_cryptos = user_data.get("selected_cryptos", [])
 
         db = SessionLocal()
         notification_data = {
-            "id": user_id,
-            "notifications_are_active": True,
-            "selected_crypto": user_data["crypto"],
             "selected_time": int(f"{hour:02d}{minute:02d}"),
-            "timezone": user_data["user_timezone"],
+            "selected_crypto": ",".join(selected_cryptos),
         }
 
-        create_notification(db, notification_data)
+        existing_notification = get_notification(db, user_id)
+        if existing_notification:
+            update_notification(
+                db, user_id, schemas.NotificationUpdate(**notification_data)
+            )
+        else:
+            create_notification(
+                db, schemas.NotificationCreate(id=user_id, **notification_data)
+            )
         db.close()
 
         schedule_job(
             message.bot,
             user_id,
-            user_data["crypto"],
+            selected_cryptos,
             hour,
             minute,
             user_data["user_timezone"],
         )
 
+        selected_names = [
+            coin["name"]
+            for coin in user_data["available_cryptos"]
+            if coin["id"] in selected_cryptos
+        ]
         await message.answer(
-            f"Оповещения установлены:\nКриптовалюта: {user_data['crypto']}\nВремя: {hour:02d}:{minute:02d}\nЧасовой пояс: {user_data['user_timezone']}",
+            f"Оповещения установлены:\nКриптовалюты: {', '.join(selected_names)}\nВремя: {hour:02d}:{minute:02d}\nЧасовой пояс: {user_data['user_timezone']}",
             reply_markup=get_back_kb(),
         )
         await state.clear()

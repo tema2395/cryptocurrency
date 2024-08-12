@@ -8,9 +8,7 @@ load_dotenv()
 SQLALCHEMY_DATABASE_URL = f'postgresql://{os.getenv("USER")}:{os.getenv("PASSWORD")}@{os.getenv("HOST")}:{os.getenv("PORT")}/cryptocurrency_rate'
 
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

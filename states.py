@@ -5,4 +5,5 @@ class CryptoStates(StatesGroup):
     waiting_for_location = State()
     waiting_for_manual_timezone = State()
     waiting_for_crypto = State()
+    waiting_for_crypto_alert = State()
     waiting_for_time = State()
