@@ -1,6 +1,7 @@
 import pytz
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -26,6 +27,15 @@ router = Router()
 async def settings(callback: types.CallbackQuery):
     await callback.message.delete()
     await callback.message.answer(
+        text=f"Здесь вы можете настроить оповещения от бота.\n\nЕсли оповещения <b>выключены</b>:<blockquote>бот <b>НЕ</b> будет уведомлять вас о курсе монет</blockquote>\n\nПри <b>активации</b> данной функции:<blockquote>-Выбор интересующей вас криптовалюты\n-Выбор времени, в которое бот будет отправлять вам акутальный курс, выбранных коинов.</blockquote>",
+        reply_markup=get_alert_settings_kb(),
+    )
+
+
+@router.message(Command("settings"))
+async def settings(message: types.Message):
+    await message.delete()
+    await message.answer(
         text=f"Здесь вы можете настроить оповещения от бота.\n\nЕсли оповещения <b>выключены</b>:<blockquote>бот <b>НЕ</b> будет уведомлять вас о курсе монет</blockquote>\n\nПри <b>активации</b> данной функции:<blockquote>-Выбор интересующей вас криптовалюты\n-Выбор времени, в которое бот будет отправлять вам акутальный курс, выбранных коинов.</blockquote>",
         reply_markup=get_alert_settings_kb(),
     )
@@ -177,7 +187,7 @@ async def handle_process_crypto(message: types.Message, state: FSMContext):
             callback_data=f"select_crypto:{coin['id']}",
         )
     keyboard.adjust(2)
-    keyboard.button(text="Подтвердить выбор", callback_data="confirm_crypto_selection")
+    keyboard.row(types.InlineKeyboardButton(text="Подтвердить выбор", callback_data="confirm_crypto_selection"))
 
     await state.update_data(available_cryptos=all_results)
     await message.answer(

@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from coingecko import get_crypto_price, search_crypto
 from states import CryptoStates
 from keyboards.for_crypto import get_crypto_kb
+from aiogram.filters import Command
 
 
 router = Router()
@@ -19,6 +20,16 @@ popular_cryptos = [
 async def cryptocurrency_selection(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await callback.message.answer(
+        text="Выберите криптовалюту из списка или нажмите 'Другое', чтобы ввести вручную:",
+        reply_markup=get_crypto_kb(popular_cryptos),
+    )
+    await state.set_state(CryptoStates.waiting_for_crypto)
+
+
+@router.message(Command("crypto"))
+async def cryptocurrency_selection(message: types.Message, state: FSMContext):
+    await message.delete()
+    await message.answer(
         text="Выберите криптовалюту из списка или нажмите 'Другое', чтобы ввести вручную:",
         reply_markup=get_crypto_kb(popular_cryptos),
     )
