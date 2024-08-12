@@ -1,7 +1,11 @@
 import pytz
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ReplyKeyboardRemove,
+)
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from coingecko import search_crypto
 from database.crud import create_notification, get_notification, update_notification
@@ -119,7 +123,7 @@ async def handle_location(message: types.Message, state: FSMContext):
         db.close()
         await message.answer(
             f"Ваш часовой пояс определен как {timezone_str}. Текущее время:{current_time.strftime('%H:%M')}",
-            reply_markup=ReplyKeyboardRemove()
+            reply_markup=ReplyKeyboardRemove(),
         )
         await message.answer(
             "Теперь введите криптовалюту через пробел, по которой хотите получать курс:"
@@ -172,7 +176,7 @@ async def handle_process_crypto(message: types.Message, state: FSMContext):
             text=f"{coin['name']} ({coin['symbol']})",
             callback_data=f"select_crypto:{coin['id']}",
         )
-    keyboard.adjust(2) 
+    keyboard.adjust(2)
     keyboard.button(text="Подтвердить выбор", callback_data="confirm_crypto_selection")
 
     await state.update_data(available_cryptos=all_results)
@@ -197,7 +201,6 @@ async def select_crypto(callback: types.CallbackQuery, state: FSMContext):
         selected_cryptos.append(crypto_id)
 
     await state.update_data(selected_cryptos=selected_cryptos)
-
 
     keyboard = InlineKeyboardBuilder()
     for coin in user_data["available_cryptos"]:
@@ -229,7 +232,7 @@ async def confirm_crypto_selection(callback: types.CallbackQuery, state: FSMCont
     await callback.message.edit_text(
         f"Вы выбрали: {', '.join(selected_names)}\nТеперь введите время для оповещений в формате ЧЧ:ММ:"
     )
-    
+
     await state.set_state(CryptoStates.waiting_for_time)
 
 

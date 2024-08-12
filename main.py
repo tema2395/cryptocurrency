@@ -29,7 +29,7 @@ dp.include_router(alert.router)
 
 def create_table():
     Base.metadata.create_all(bind=engine)
-    
+
 
 async def main():
     create_table()

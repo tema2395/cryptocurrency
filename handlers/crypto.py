@@ -50,19 +50,21 @@ async def process_other_crypto(message: types.Message, state: FSMContext):
     for query in queries:
         results = await search_crypto(query)
         if results:
-            all_results.append(results[0]) 
+            all_results.append(results[0])
         else:
             not_found.append(query)
 
     if not all_results:
-        await message.answer("Ни одна из указанных криптовалют не найдена. Попробуйте еще раз.")
+        await message.answer(
+            "Ни одна из указанных криптовалют не найдена. Попробуйте еще раз."
+        )
         return
 
     prices = []
     for coin in all_results:
-        price = await get_crypto_price(coin['id'])
+        price = await get_crypto_price(coin["id"])
         prices.append(f"{coin['name']} ({coin['symbol']}): ${price:.2f}")
-    
+
     response = "\n".join(prices)
     if not_found:
         response += f"\n\nНе найдены: {', '.join(not_found)}"
