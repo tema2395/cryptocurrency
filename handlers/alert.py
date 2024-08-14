@@ -187,7 +187,11 @@ async def handle_process_crypto(message: types.Message, state: FSMContext):
             callback_data=f"select_crypto:{coin['id']}",
         )
     keyboard.adjust(2)
-    keyboard.row(types.InlineKeyboardButton(text="Подтвердить выбор", callback_data="confirm_crypto_selection"))
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text="Подтвердить выбор", callback_data="confirm_crypto_selection"
+        )
+    )
 
     await state.update_data(available_cryptos=all_results)
     await message.answer(

@@ -23,8 +23,9 @@ dp = Dispatcher(storage=MemoryStorage())
 
 
 dp.include_router(start.router)
-dp.include_router(crypto.router)
 dp.include_router(alert.router)
+dp.include_router(crypto.router)
+
 
 
 def create_table():
