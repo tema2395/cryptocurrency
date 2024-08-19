@@ -32,7 +32,21 @@ async def search_crypto(query):
                         for coin in data["coins"]
                         if query.lower() in coin["name"].lower()
                         or query.lower() in coin["symbol"].lower()
+                        or query.lower() in coin["id"].lower()
                     ]
+                    if not filtered_results:
+                        async with session.get(
+                            f"https://api.coingecko.com/api/v3/coins/{query.lower()}"
+                        ) as direct_response:
+                            if direct_response.status == 200:
+                                coin_data = await direct_response.json()
+                                filtered_results = [
+                                    {
+                                        "id": coin_data["id"],
+                                        "name": coin_data["name"],
+                                        "symbol": coin_data["symbol"],
+                                    }
+                                ]
                     return filtered_results[:5]
                 else:
                     print(f"Error searching crypto: Status code {response.status}")

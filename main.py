@@ -27,7 +27,6 @@ dp.include_router(alert.router)
 dp.include_router(crypto.router)
 
 
-
 def create_table():
     Base.metadata.create_all(bind=engine)
 

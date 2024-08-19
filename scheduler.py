@@ -16,13 +16,19 @@ async def send_crypto_prices(bot: Bot, user_id: int, cryptos: list):
             if results:
                 price = await get_crypto_price(results[0]["id"])
                 messages.append(
-                    f"{results[0]['name']} ({results[0]['symbol']}): ${price:.2f}"
+                    f"{results[0]['name']} ({results[0]['symbol'].upper()}): ${price:.2f}"
                 )
             else:
                 messages.append(f"Криптовалюта {crypto} не найдена.")
 
-        await bot.send_message(chat_id=user_id, text="\n".join(messages))
-        print(f"Prices sent successfully for {cryptos}")
+        if messages:
+            await bot.send_message(chat_id=user_id, text="\n".join(messages))
+            print(f"Prices sent successfully for {cryptos}")
+        else:
+            await bot.send_message(
+                chat_id=user_id,
+                text="Не удалось получить информацию о выбранных криптовалютах.",
+            )
     except Exception as e:
         print(f"Unexpected error in send_crypto_prices: {e}")
         await bot.send_message(
